@@ -5,7 +5,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 //   Android emulator → http://10.0.2.2:3001
 //   iOS simulator    → http://localhost:3001
 //   Real device      → http://<your-lan-ip>:3001
-const BASE_URL = "http://172.24.208.1:3001";
+const BASE_URL = "https://invitewala-backend-production.up.railway.app";
 
 async function getToken() {
   return AsyncStorage.getItem("@invitewala_token");
