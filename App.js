@@ -1,5 +1,22 @@
 import React, { useEffect, useState } from "react";
-import { View, ActivityIndicator } from "react-native";
+import { View, ActivityIndicator, Text, ScrollView } from "react-native";
+
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(error) { return { error }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <ScrollView style={{ flex: 1, backgroundColor: "#0C0C14", padding: 24 }}>
+          <Text style={{ color: "#FF6B6B", fontSize: 18, fontWeight: "bold", marginTop: 60 }}>❌ App Crashed</Text>
+          <Text style={{ color: "#fff", marginTop: 12, fontSize: 13 }}>{this.state.error?.toString()}</Text>
+          <Text style={{ color: "rgba(255,255,255,0.4)", marginTop: 12, fontSize: 11 }}>{this.state.error?.stack}</Text>
+        </ScrollView>
+      );
+    }
+    return this.props.children;
+  }
+}
 import { useFonts } from "expo-font";
 import {
   PlayfairDisplay_700Bold,
@@ -68,5 +85,5 @@ export default function App() {
     );
   }
 
-  return <AppNavigator />;
+  return <ErrorBoundary><AppNavigator /></ErrorBoundary>;
 }
