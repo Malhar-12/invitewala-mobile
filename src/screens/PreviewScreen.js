@@ -3,9 +3,6 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   SafeAreaView, StatusBar, TextInput, Share, Linking, Alert, Platform,
 } from "react-native";
-import ViewShot from "react-native-view-shot";
-import * as MediaLibrary from "expo-media-library";
-import * as Sharing from "expo-sharing";
 import { findOccasion } from "../constants/occasions";
 import { findTemplate } from "../constants/templates";
 import { findLanguage } from "../constants/languages";
@@ -33,45 +30,27 @@ export default function PreviewScreen({ navigation }) {
   const [saving,   setSaving]   = useState(false);
   const [saved,    setSaved]    = useState(false);
   const [sharing,  setSharing]  = useState(false);
+
   const [waSent,   setWaSent]   = useState(false);
   const [copied,   setCopied]   = useState(false);
   const [dbSaved,  setDbSaved]  = useState(false);
 
-  async function captureCard() {
-    if (!shotRef.current) throw new Error("Card not ready");
-    return shotRef.current.capture();
-  }
-
   async function handleShare() {
     try {
       setSharing(true);
-      const uri = await captureCard();
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, { mimeType: "image/png", dialogTitle: `${occ.name} Invitation` });
-      } else {
-        await Share.share({ url: uri, title: `${occ.name} Invitation`, message: buildWhatsAppMessage(occ, form, genText) });
-      }
+      const msg = buildWhatsAppMessage(occ, form, genText);
+      await Share.share({ title: `${occ.name} Invitation`, message: msg });
     } catch (e) {
-      if (e?.message !== "User did not share") Alert.alert("Share failed", "Please try Download instead.");
+      if (e?.message !== "User did not share") Alert.alert("Share failed", "Please try WhatsApp instead.");
     } finally {
       setSharing(false);
     }
   }
 
   async function handleDownload() {
-    try {
-      setSaving(true);
-      const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status !== "granted") { Alert.alert("Permission needed", "Allow access to save to gallery."); setSaving(false); return; }
-      const uri = await captureCard();
-      await MediaLibrary.saveToLibraryAsync(uri);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 4000);
-    } catch {
-      Alert.alert("Error", "Could not save image. Please screenshot the card.");
-    } finally {
-      setSaving(false);
-    }
+    Alert.alert("Screenshot", "Please take a screenshot of the card to save it to your gallery.");
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
   }
 
   function handleWhatsApp() {
@@ -114,9 +93,9 @@ export default function PreviewScreen({ navigation }) {
 
         {/* Card preview */}
         <View style={[styles.cardWrap, { borderColor: g1 + "44", shadowColor: g1 }]}>
-          <ViewShot ref={shotRef} options={{ format: "png", quality: 1 }} style={styles.cardShot}>
+          <View ref={shotRef} style={styles.cardShot}>
             <InviteCard occ={occ} form={form} generatedText={genText} templateId={tmplId} />
-          </ViewShot>
+          </View>
         </View>
 
         {/* Action buttons */}
