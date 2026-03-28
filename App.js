@@ -8,7 +8,7 @@ class ErrorBoundary extends React.Component {
     if (this.state.error) {
       return (
         <ScrollView style={{ flex: 1, backgroundColor: "#0C0C14", padding: 24 }}>
-          <Text style={{ color: "#FF6B6B", fontSize: 18, fontWeight: "bold", marginTop: 60 }}>❌ App Crashed</Text>
+          <Text style={{ color: "#FF6B6B", fontSize: 18, fontWeight: "bold", marginTop: 60 }}>App Error</Text>
           <Text style={{ color: "#fff", marginTop: 12, fontSize: 13 }}>{this.state.error?.toString()}</Text>
           <Text style={{ color: "rgba(255,255,255,0.4)", marginTop: 12, fontSize: 11 }}>{this.state.error?.stack}</Text>
         </ScrollView>
@@ -17,6 +17,7 @@ class ErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
+
 import { useFonts } from "expo-font";
 import {
   PlayfairDisplay_700Bold,
@@ -36,14 +37,20 @@ import { useInviteStore } from "./src/store/inviteStore";
 import { apiGetMe } from "./src/api/client";
 import AppNavigator from "./src/navigation/AppNavigator";
 
-SplashScreen.preventAutoHideAsync();
+// Safely prevent auto hide - catch if it fails
+try {
+  SplashScreen.preventAutoHideAsync().catch(() => {});
+} catch (e) {
+  // Splash screen not available — continue
+}
 
 export default function App() {
   const setUser  = useInviteStore(s => s.setUser);
   const setToken = useInviteStore(s => s.setToken);
   const [ready, setReady] = useState(false);
+  const [fontError, setFontError] = useState(false);
 
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontLoadError] = useFonts({
     PlayfairDisplay_700Bold,
     PlayfairDisplay_900Black,
     PlayfairDisplay_700Bold_Italic,
@@ -54,18 +61,30 @@ export default function App() {
     Poppins_700Bold_Italic,
   });
 
+  // If fonts fail, still let app load (will use fallback system fonts)
+  useEffect(() => {
+    if (fontLoadError) {
+      console.warn("Font loading failed:", fontLoadError);
+      setFontError(true);
+    }
+  }, [fontLoadError]);
+
   useEffect(() => {
     async function init() {
       try {
         const token = await AsyncStorage.getItem("@invitewala_token");
         if (token) {
           setToken(token);
-          const { user } = await apiGetMe();
-          setUser(user);
+          try {
+            const { user } = await apiGetMe();
+            setUser(user);
+          } catch {
+            // API failed — continue as guest
+          }
         }
       } catch {
         // Token expired or no network — continue as guest
-        await AsyncStorage.removeItem("@invitewala_token");
+        try { await AsyncStorage.removeItem("@invitewala_token"); } catch {}
       } finally {
         setReady(true);
       }
@@ -74,10 +93,14 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (fontsLoaded && ready) SplashScreen.hideAsync();
-  }, [fontsLoaded, ready]);
+    if ((fontsLoaded || fontError) && ready) {
+      SplashScreen.hideAsync().catch((e) => {
+        console.warn("SplashScreen hide failed:", e);
+      });
+    }
+  }, [fontsLoaded, fontError, ready]);
 
-  if (!fontsLoaded || !ready) {
+  if ((!fontsLoaded && !fontError) || !ready) {
     return (
       <View style={{ flex: 1, backgroundColor: "#0C0C14", alignItems: "center", justifyContent: "center" }}>
         <ActivityIndicator color="#C77DFF" size="large" />
