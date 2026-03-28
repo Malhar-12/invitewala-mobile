@@ -7,17 +7,12 @@ import { findOccasion } from "../constants/occasions";
 import { useInviteStore } from "../store/inviteStore";
 import ProgressDots from "../components/ProgressDots";
 import BigButton from "../components/BigButton";
-import DateTimePicker from "@react-native-community/datetimepicker";
-
 export default function FormScreen({ navigation }) {
   const occId  = useInviteStore(s => s.occasionId);
   const form   = useInviteStore(s => s.form);
   const setForm = useInviteStore(s => s.setForm);
   const occ    = findOccasion(occId);
   const [g1]   = occ.gradient;
-
-  const [showDate, setShowDate] = React.useState(false);
-  const [showTime, setShowTime] = React.useState(false);
 
   function validate() {
     if (!form.senderName.trim()) { alert("Please enter your name!"); return false; }
@@ -26,11 +21,6 @@ export default function FormScreen({ navigation }) {
     if (!form.location.trim())   { alert("Please enter a venue!");     return false; }
     return true;
   }
-
-  const dateObj = form.date ? new Date(form.date) : new Date();
-  const timeObj = form.time
-    ? (() => { const d = new Date(); const [h, m] = form.time.split(":"); d.setHours(+h, +m); return d; })()
-    : new Date();
 
   const inputStyle = [styles.input, { borderColor: g1 + "33" }];
   const labelStyle = [styles.label, { color: g1 }];
@@ -70,40 +60,21 @@ export default function FormScreen({ navigation }) {
             <View style={styles.row}>
               <View style={{ flex: 1 }}>
                 <Text style={[labelStyle, { marginTop: 14 }]}>DATE *</Text>
-                <TouchableOpacity style={inputStyle} onPress={() => setShowDate(true)}>
-                  <Text style={{ color: form.date ? "#fff" : "rgba(255,255,255,0.25)", fontFamily: "Poppins_400Regular", fontSize: 13 }}>
-                    {form.date || "Pick date"}
-                  </Text>
-                </TouchableOpacity>
+                <TextInput
+                  style={inputStyle} value={form.date} placeholderTextColor="rgba(255,255,255,0.25)"
+                  onChangeText={v => setForm({ date: v })} placeholder="DD-MM-YYYY"
+                  keyboardType="numbers-and-punctuation"
+                />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[labelStyle, { marginTop: 14 }]}>TIME *</Text>
-                <TouchableOpacity style={inputStyle} onPress={() => setShowTime(true)}>
-                  <Text style={{ color: form.time ? "#fff" : "rgba(255,255,255,0.25)", fontFamily: "Poppins_400Regular", fontSize: 13 }}>
-                    {form.time || "Pick time"}
-                  </Text>
-                </TouchableOpacity>
+                <TextInput
+                  style={inputStyle} value={form.time} placeholderTextColor="rgba(255,255,255,0.25)"
+                  onChangeText={v => setForm({ time: v })} placeholder="HH:MM"
+                  keyboardType="numbers-and-punctuation"
+                />
               </View>
             </View>
-
-            {showDate && (
-              <DateTimePicker
-                value={dateObj} mode="date" display="default"
-                onChange={(e, d) => {
-                  setShowDate(false);
-                  if (d) setForm({ date: d.toISOString().split("T")[0] });
-                }}
-              />
-            )}
-            {showTime && (
-              <DateTimePicker
-                value={timeObj} mode="time" display="default" is24Hour={false}
-                onChange={(e, d) => {
-                  setShowTime(false);
-                  if (d) setForm({ time: `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}` });
-                }}
-              />
-            )}
 
             <Text style={[labelStyle, { marginTop: 14 }]}>VENUE *</Text>
             <TextInput
