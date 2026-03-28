@@ -43,14 +43,6 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      [
-        "expo-media-library",
-        {
-          "photosPermission": "Allow InviteWala to save invite cards to your gallery.",
-          "savePhotosPermission": "Allow InviteWala to save invite cards to your gallery.",
-          "isAccessMediaLocationEnabled": true
-        }
-      ],
       "expo-asset"
     ],
     "updates": {
