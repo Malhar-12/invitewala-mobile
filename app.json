@@ -26,8 +26,9 @@
     },
     "extra": {
       "eas": {
-        "projectId": "ad62d29b-19f7-45ca-b950-49003ec9bf57"
+        "projectId": "1d5a2ea9-d8ce-4874-8957-bd9a86febe9c"
       }
-    }
+    },
+    "owner": "malhar-12"
   }
 }
