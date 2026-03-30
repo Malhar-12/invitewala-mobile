@@ -2,15 +2,41 @@ const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov
 
 export function formatDate(dateStr) {
   if (!dateStr) return "";
-  const [y, m, d] = dateStr.split("-");
-  return `${+d} ${MONTHS[+m - 1]} ${y}`;
+  // Handle both DD-MM-YYYY and YYYY-MM-DD formats
+  const parts = dateStr.split("-");
+  if (parts.length !== 3) return dateStr; // return as-is if not valid
+
+  let d, m, y;
+  if (parts[0].length === 4) {
+    // YYYY-MM-DD
+    [y, m, d] = parts;
+  } else {
+    // DD-MM-YYYY
+    [d, m, y] = parts;
+  }
+
+  const monthName = MONTHS[+m - 1];
+  if (!monthName) return dateStr;
+
+  // Show short year if 4 digits
+  const shortYear = y && y.length === 4 ? y.slice(2) : y;
+  return `${+d} ${monthName} ${shortYear}`;
 }
 
 export function formatTime(timeStr) {
   if (!timeStr) return "";
-  const [h, m] = timeStr.split(":");
-  const hr = +h;
-  return `${hr % 12 || 12}:${m} ${hr >= 12 ? "PM" : "AM"}`;
+  const parts = timeStr.split(":");
+  if (parts.length !== 2) return timeStr; // return as-is if not HH:MM
+
+  const [h, m] = parts;
+  const hr = parseInt(h, 10);
+  const min = m || "00";
+
+  if (isNaN(hr)) return timeStr;
+
+  const displayHr = hr % 12 || 12;
+  const period = hr >= 12 ? "PM" : "AM";
+  return `${displayHr}:${min.padStart(2, "0")} ${period}`;
 }
 
 export function buildWhatsAppMessage(occ, form, text) {

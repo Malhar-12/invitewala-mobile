@@ -3,10 +3,12 @@ import LuxeCard from "./cards/LuxeCard";
 import ModernCard from "./cards/ModernCard";
 import FloralCard from "./cards/FloralCard";
 import VibrantCard from "./cards/VibrantCard";
+import { getTranslation } from "../constants/translations";
 
-// Unified card switcher — pass this to ViewShot for image export
-export default function InviteCard({ occ, form, generatedText, templateId }) {
-  const props = { occ, form, generatedText };
+// Unified card switcher
+export default function InviteCard({ occ, form, generatedText, templateId, langCode = "en" }) {
+  const t = getTranslation(langCode);
+  const props = { occ, form, generatedText, t };
   switch (templateId) {
     case "modern":  return <ModernCard {...props} />;
     case "floral":  return <FloralCard {...props} />;
