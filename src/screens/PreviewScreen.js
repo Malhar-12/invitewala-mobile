@@ -1,11 +1,8 @@
-import React, { useRef, useState, useCallback } from "react";
+import React, { useState } from "react";
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  SafeAreaView, StatusBar, TextInput, Share, Linking, Alert, Platform,
+  SafeAreaView, StatusBar, TextInput, Share, Linking, Alert,
 } from "react-native";
-import { captureRef } from "react-native-view-shot";
-import * as Sharing from "expo-sharing";
-import * as FileSystem from "expo-file-system";
 import { findOccasion } from "../constants/occasions";
 import { findTemplate } from "../constants/templates";
 import { findLanguage } from "../constants/languages";
@@ -29,108 +26,53 @@ export default function PreviewScreen({ navigation }) {
   const lang = findLanguage(langCode);
   const [g1, g2] = occ.gradient;
 
-  const cardRef  = useRef(null);
-  const [saving,   setSaving]   = useState(false);
-  const [saved,    setSaved]    = useState(false);
   const [sharing,  setSharing]  = useState(false);
   const [waSent,   setWaSent]   = useState(false);
   const [dbSaved,  setDbSaved]  = useState(false);
 
-  // Capture card as image and share
-  async function handleShareImage() {
+  // Share using built-in Share API (text format with beautiful formatting)
+  async function handleShare() {
     try {
       setSharing(true);
-      const uri = await captureRef(cardRef, {
-        format: "png",
-        quality: 1,
-        result: "tmpfile",
+      const msg = buildWhatsAppMessage(occ, form, genText);
+      await Share.share({
+        title: `${occ.name} Invitation`,
+        message: msg,
       });
-
-      // Check if sharing is available
-      const isAvailable = await Sharing.isAvailableAsync();
-      if (isAvailable) {
-        await Sharing.shareAsync(uri, {
-          mimeType: "image/png",
-          dialogTitle: `${occ.name} Invitation`,
-          UTI: "public.png",
-        });
-      } else {
-        // Fallback to text share
-        const msg = buildWhatsAppMessage(occ, form, genText);
-        await Share.share({ title: `${occ.name} Invitation`, message: msg });
-      }
     } catch (e) {
-      // Fallback to text share on error
-      try {
-        const msg = buildWhatsAppMessage(occ, form, genText);
-        await Share.share({ title: `${occ.name} Invitation`, message: msg });
-      } catch {
-        Alert.alert("Share failed", "Please take a screenshot to share.");
-      }
+      // User cancelled or share failed
     } finally {
       setSharing(false);
     }
   }
 
-  // Download card as image
-  async function handleDownload() {
+  // Share on WhatsApp directly
+  async function handleWhatsApp() {
     try {
-      setSaving(true);
-      const uri = await captureRef(cardRef, {
-        format: "png",
-        quality: 1,
-        result: "tmpfile",
-      });
-
-      // Copy to a permanent location
-      const fileName = `InviteWala_${occ.name.replace(/\s/g, "_")}_${Date.now()}.png`;
-      const destPath = FileSystem.documentDirectory + fileName;
-      await FileSystem.copyAsync({ from: uri, to: destPath });
-
-      setSaved(true);
-      Alert.alert("Saved!", "Card image saved. You can also take a screenshot to save to gallery.", [{ text: "OK" }]);
-      setTimeout(() => setSaved(false), 3000);
-    } catch (e) {
-      Alert.alert("Screenshot", "Please take a screenshot of the card to save it to your gallery.");
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
-    } finally {
-      setSaving(false);
+      const msg = buildWhatsAppMessage(occ, form, genText);
+      const ph = (form.whatsapp || "").replace(/\D/g, "");
+      const url = ph
+        ? `https://wa.me/91${ph}?text=${encodeURIComponent(msg)}`
+        : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+      const canOpen = await Linking.canOpenURL(url);
+      if (canOpen) {
+        await Linking.openURL(url);
+        setWaSent(true);
+      } else {
+        Alert.alert("WhatsApp not found", "Please install WhatsApp to share directly.");
+      }
+    } catch {
+      Alert.alert("Error", "Could not open WhatsApp.");
     }
   }
 
-  // Share on WhatsApp as image
-  async function handleWhatsApp() {
-    try {
-      const uri = await captureRef(cardRef, {
-        format: "png",
-        quality: 1,
-        result: "tmpfile",
-      });
-
-      const ph = form.whatsapp.replace(/\D/g, "");
-      const isAvailable = await Sharing.isAvailableAsync();
-
-      if (isAvailable) {
-        await Sharing.shareAsync(uri, {
-          mimeType: "image/png",
-          dialogTitle: "Share via WhatsApp",
-        });
-      } else {
-        // Fallback: open WhatsApp with text
-        const msg = buildWhatsAppMessage(occ, form, genText);
-        const url = ph ? `https://wa.me/${ph}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
-        Linking.openURL(url).catch(() => Alert.alert("WhatsApp not installed"));
-      }
-      setWaSent(true);
-    } catch {
-      // Fallback: open WhatsApp with text
-      const msg = buildWhatsAppMessage(occ, form, genText);
-      const ph = form.whatsapp.replace(/\D/g, "");
-      const url = ph ? `https://wa.me/${ph}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
-      Linking.openURL(url).catch(() => Alert.alert("WhatsApp not installed"));
-      setWaSent(true);
-    }
+  // Download — prompt to screenshot
+  function handleDownload() {
+    Alert.alert(
+      "📸 Save Your Card",
+      "Take a screenshot of the card above to save it to your gallery!\n\nTip: Press Power + Volume Down buttons together.",
+      [{ text: "Got it!" }]
+    );
   }
 
   async function handleSaveToHistory() {
@@ -163,24 +105,22 @@ export default function PreviewScreen({ navigation }) {
           <Text style={styles.topInfo}>{occ.name} · {tmpl.name} · {lang.english}</Text>
         </View>
 
-        {/* Card preview — this is what gets captured as image */}
+        {/* Card preview */}
         <View style={[styles.cardWrap, { borderColor: g1 + "44", shadowColor: g1 }]}>
-          <View ref={cardRef} collapsable={false} style={styles.cardShot}>
-            <InviteCard occ={occ} form={form} generatedText={genText} templateId={tmplId} langCode={langCode} />
-          </View>
+          <InviteCard occ={occ} form={form} generatedText={genText} templateId={tmplId} langCode={langCode} />
         </View>
 
         {/* Action buttons */}
         <View style={styles.actions}>
 
-          {/* Primary Share as Image */}
-          <BigButton gradient={[g1, g2]} onPress={handleShareImage} loading={sharing} style={styles.shadow}>
-            📤  Share Card Image → WhatsApp / Any App
+          {/* Primary Share */}
+          <BigButton gradient={[g1, g2]} onPress={handleShare} loading={sharing} style={styles.shadow}>
+            📤  Share Invitation → Any App
           </BigButton>
 
           {/* WhatsApp direct share */}
           <View style={styles.waBox}>
-            <Text style={styles.waTitle}>💬 SEND CARD ON WHATSAPP</Text>
+            <Text style={styles.waTitle}>💬 SEND ON WHATSAPP</Text>
             <View style={styles.waRow}>
               <View style={styles.countryCode}><Text style={styles.countryTxt}>+91</Text></View>
               <TextInput
@@ -190,19 +130,17 @@ export default function PreviewScreen({ navigation }) {
               />
             </View>
             <TouchableOpacity style={styles.waSendBtn} onPress={handleWhatsApp} activeOpacity={0.85}>
-              <Text style={styles.waSendTxt}>💬  Share Card on WhatsApp</Text>
+              <Text style={styles.waSendTxt}>💬  Send on WhatsApp</Text>
             </TouchableOpacity>
             {waSent && <Text style={styles.successMsg}>✅ WhatsApp opened!</Text>}
           </View>
 
-          {/* Download */}
+          {/* Screenshot tip */}
           <TouchableOpacity
-            style={[styles.outlineBtn, { borderColor: saved ? "#22c55e" : g1 + "44" }]}
-            onPress={handleDownload} disabled={saving} activeOpacity={0.8}
+            style={[styles.outlineBtn, { borderColor: g1 + "44" }]}
+            onPress={handleDownload} activeOpacity={0.8}
           >
-            <Text style={[styles.outlineTxt, { color: saved ? "#22c55e" : g1 }]}>
-              {saving ? "Saving..." : saved ? "✅ Saved!" : "📥  Download Card as PNG"}
-            </Text>
+            <Text style={[styles.outlineTxt, { color: g1 }]}>📸  Save Card — Take Screenshot</Text>
           </TouchableOpacity>
 
           {/* Save to history */}
@@ -238,7 +176,6 @@ const styles = StyleSheet.create({
   backTxt: { fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.45)", fontSize: 11 },
   topInfo: { fontFamily: "Poppins_400Regular", color: "rgba(255,255,255,0.22)", fontSize: 10 },
   cardWrap: { borderRadius: 16, overflow: "hidden", borderWidth: 2, marginBottom: 18, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 12 },
-  cardShot: { borderRadius: 14, overflow: "hidden" },
   actions: { gap: 10 },
   shadow:  { shadowOpacity: 0.4, shadowRadius: 16, elevation: 8 },
   waBox: { backgroundColor: "rgba(37,211,102,0.06)", borderWidth: 1.5, borderColor: "rgba(37,211,102,0.18)", borderRadius: 14, padding: 13 },
