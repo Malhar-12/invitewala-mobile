@@ -1,1 +1,35 @@
 
+{
+  "expo": {
+    "name": "InviteWala",
+    "slug": "invitewala",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": false,
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0C0C14"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0C0C14"
+      },
+      "package": "in.invitewala.app",
+      "versionCode": 2
+    },
+    "plugins": [],
+    "updates": {
+      "enabled": false
+    },
+    "extra": {
+      "eas": {
+        "projectId": "1d5a2ea9-d8ce-4874-8957-bd9a86febe9c"
+      }
+    },
+    "owner": "malhar-12"
+  }
+}
